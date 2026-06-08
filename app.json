@@ -3,7 +3,7 @@
     "name": "Ninja Slice",
     "slug": "ninja-slice",
     "version": "1.0.0",
-    "orientation": "any",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "backgroundColor": "#090a0f",
