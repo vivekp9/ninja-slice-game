@@ -1,0 +1,3155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Ninja Slice - Low Key Swipe Action</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-dark: #090a0f;
+      --bg-card: rgba(18, 20, 32, 0.65);
+      --border-glass: rgba(255, 255, 255, 0.08);
+      --border-neon: rgba(147, 51, 234, 0.4);
+      --color-primary: #a855f7;
+      --color-primary-glow: rgba(168, 85, 247, 0.35);
+      --color-secondary: #3b82f6;
+      --color-danger: #ef4444;
+      --color-text: #f3f4f6;
+      --color-text-muted: #9ca3af;
+      --font-logo: 'Fredoka', sans-serif;
+      --font-ui: 'Outfit', sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+      touch-action: none;
+    }
+
+    body {
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      color: var(--color-text);
+      font-family: var(--font-ui);
+      position: relative;
+    }
+
+    #gameCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      display: block;
+    }
+
+    #hud {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: auto;
+      z-index: 10;
+      padding: 24px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      font-family: var(--font-ui);
+    }
+
+    #hud.hidden {
+      display: none !important;
+    }
+
+    .hud-top-left {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #scoreLabel {
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      font-weight: 800;
+      color: var(--color-primary);
+      text-shadow: 0 0 10px var(--color-primary-glow);
+    }
+
+    #scoreValue {
+      font-size: 2.25rem;
+      font-weight: 800;
+      line-height: 1;
+      color: #ffffff;
+    }
+
+    .hud-top-center {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    #timerContainer {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(0, 0, 0, 0.4);
+      padding: 6px 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    #timerContainer.hidden {
+      display: none !important;
+    }
+
+    #timerLabel {
+      font-size: 0.65rem;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      color: var(--color-text-muted);
+    }
+
+    #timerValue {
+      font-size: 1.5rem;
+      font-weight: 800;
+      color: #fff;
+    }
+
+    #comboAnnouncer {
+      font-size: 1.75rem;
+      font-weight: 900;
+      font-family: var(--font-logo);
+      color: #facc15;
+      text-shadow: 0 2px 10px rgba(250, 204, 21, 0.5);
+      transform: scale(0);
+      transition: transform 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    #comboAnnouncer.pop {
+      transform: scale(1.1) rotate(-5deg);
+    }
+
+    .hud-top-right {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      pointer-events: auto;
+    }
+
+    #livesContainer {
+      display: flex;
+      gap: 6px;
+    }
+
+    .heart {
+      width: 16px;
+      height: 16px;
+      background-color: #374151;
+      position: relative;
+      transform: rotate(-45deg);
+      transition: background-color 0.3s ease, transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .heart::before,
+    .heart::after {
+      content: "";
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      background-color: inherit;
+      position: absolute;
+    }
+
+    .heart::before {
+      top: -8px;
+      left: 0;
+    }
+
+    .heart::after {
+      top: 0;
+      left: 8px;
+    }
+
+    .heart.active {
+      background-color: var(--color-danger);
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.4);
+    }
+
+    .heart.lost {
+      transform: scale(0.6) rotate(-45deg);
+      background-color: #374151;
+      box-shadow: none;
+    }
+
+    #pauseButton {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      border: 1px solid var(--border-glass);
+      background: var(--bg-card);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    #pauseButton svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    #pauseButton:active {
+      transform: scale(0.9);
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .overlay-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      pointer-events: auto;
+    }
+
+    .menu-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg-card);
+      border: 1px solid var(--border-glass);
+      border-radius: 28px;
+      padding: 36px 28px;
+      text-align: center;
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+      z-index: 25;
+      transform: scale(0.9);
+      opacity: 0;
+      pointer-events: none;
+      transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.15), opacity 0.3s ease;
+      position: absolute;
+    }
+
+    .menu-card.active {
+      transform: scale(1);
+      opacity: 1;
+      pointer-events: auto;
+      position: relative;
+    }
+
+    .menu-card.hidden {
+      display: none !important;
+    }
+
+    .logo-area {
+      position: relative;
+      margin-bottom: 8px;
+    }
+
+    .logo-title {
+      font-family: var(--font-logo);
+      font-weight: 700;
+      font-size: 3rem;
+      letter-spacing: -0.02em;
+      color: #fff;
+      line-height: 1;
+      text-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    }
+
+    .logo-title .highlight {
+      color: var(--color-primary);
+      text-shadow: 0 0 15px var(--color-primary-glow);
+    }
+
+    .logo-subtitle {
+      font-size: 0.85rem;
+      font-weight: 400;
+      color: var(--color-text-muted);
+      letter-spacing: 0.15em;
+      text-transform: uppercase;
+      margin-top: 6px;
+    }
+
+    .title-bg-glow {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 120px;
+      height: 120px;
+      background: var(--color-primary);
+      filter: blur(65px);
+      opacity: 0.25;
+      z-index: -1;
+      pointer-events: none;
+    }
+
+    .menu-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 16px;
+      border-radius: 16px;
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 1rem;
+      letter-spacing: 0.05em;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s, box-shadow 0.2s;
+    }
+
+    .btn:active {
+      transform: scale(0.96);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(124, 58, 237, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      color: var(--color-text);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-danger {
+      background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+      color: white;
+      box-shadow: 0 4px 15px rgba(239, 68, 68, 0.25);
+    }
+
+    .btn-subtext {
+      font-size: 0.7rem;
+      font-weight: 400;
+      color: rgba(255, 255, 255, 0.7);
+      letter-spacing: 0;
+      margin-top: 3px;
+    }
+
+    .menu-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 8px;
+      gap: 12px;
+    }
+
+    .btn-icon-label {
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+
+    .btn-icon-label svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    .btn-icon-label:active {
+      color: #fff;
+    }
+
+    .high-score-badge {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--color-text);
+    }
+
+    #bestScoreVal {
+      color: #facc15;
+      font-weight: 800;
+    }
+
+    .settings-content {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      text-align: left;
+    }
+
+    .settings-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+    }
+
+    .settings-row label {
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .btn-sm {
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 0.85rem;
+    }
+
+    .toggle-switch {
+      position: relative;
+      width: 50px;
+      height: 26px;
+    }
+
+    .toggle-switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #374151;
+      transition: .3s;
+      border-radius: 34px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 20px;
+      width: 20px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .3s;
+      border-radius: 50%;
+    }
+
+    input:checked + .slider {
+      background-color: var(--color-primary);
+      box-shadow: 0 0 8px var(--color-primary-glow);
+    }
+
+    input:checked + .slider:before {
+      transform: translateX(24px);
+    }
+
+    .how-to-play {
+      margin-top: 10px;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.03);
+    }
+
+    .how-to-play h3 {
+      font-size: 0.9rem;
+      margin-bottom: 8px;
+      color: var(--color-primary);
+      letter-spacing: 0.05em;
+      font-weight: 800;
+    }
+
+    .how-to-play p {
+      font-size: 0.8rem;
+      line-height: 1.5;
+      color: var(--color-text-muted);
+      margin-bottom: 6px;
+    }
+
+    .how-to-play p:last-child {
+      margin-bottom: 0;
+    }
+
+    .score-display {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin: 10px 0;
+    }
+
+    .score-block {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      width: 100%;
+      padding: 20px;
+      border-radius: 20px;
+    }
+
+    .block-label {
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      font-weight: 600;
+      color: var(--color-text-muted);
+      margin-bottom: 4px;
+    }
+
+    .block-val {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: #fff;
+      line-height: 1;
+    }
+
+    .text-glow {
+      color: var(--color-secondary);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+    }
+
+    #newBestBadge {
+      background: linear-gradient(90deg, #facc15 0%, #eab308 100%);
+      color: #000;
+      padding: 6px 16px;
+      border-radius: 12px;
+      font-weight: 800;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      box-shadow: 0 4px 12px rgba(234, 179, 8, 0.35);
+      animation: pulse 1.5s infinite alternate;
+    }
+
+    #gameOverTitle {
+      font-family: var(--font-logo);
+      font-size: 2.75rem;
+      color: var(--color-danger);
+      text-shadow: 0 0 15px rgba(239, 68, 68, 0.3);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      100% { transform: scale(1.05); }
+    }
+
+    /* Dojo & Blades Custom Styles */
+    #dojoMenu {
+      max-width: 420px;
+    }
+    .dojo-tabs {
+      display: flex;
+      border-bottom: 1px solid var(--border-glass);
+      margin-bottom: 12px;
+      gap: 8px;
+    }
+    .dojo-tab-btn {
+      flex: 1;
+      padding: 10px;
+      background: none;
+      border: none;
+      color: var(--color-text-muted);
+      font-family: var(--font-ui);
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .dojo-tab-btn.active {
+      color: var(--color-primary);
+      border-bottom-color: var(--color-primary);
+    }
+    .dojo-content-scroll {
+      max-height: 250px;
+      overflow-y: auto;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      text-align: left;
+    }
+    .dojo-content-scroll::-webkit-scrollbar {
+      width: 6px;
+    }
+    .dojo-content-scroll::-webkit-scrollbar-track {
+      background: rgba(255,255,255,0.02);
+      border-radius: 3px;
+    }
+    .dojo-content-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,0.15);
+      border-radius: 3px;
+    }
+    .blade-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 16px;
+      padding: 10px 12px;
+      transition: background 0.2s, border-color 0.2s;
+    }
+    .blade-item.selected {
+      background: rgba(168, 85, 247, 0.08);
+      border-color: rgba(168, 85, 247, 0.3);
+    }
+    .blade-icon-preview {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      flex-shrink: 0;
+    }
+    .blade-details {
+      flex: 1;
+    }
+    .blade-name {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .blade-desc {
+      font-size: 0.75rem;
+      color: var(--color-text-muted);
+      margin-top: 2px;
+      line-height: 1.3;
+    }
+    .blade-unlock {
+      font-size: 0.7rem;
+      color: #fb7185;
+      font-weight: 600;
+      margin-top: 4px;
+    }
+    .blade-action-btn {
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      font-family: var(--font-ui);
+      transition: transform 0.1s;
+    }
+    .blade-action-btn:active {
+      transform: scale(0.95);
+    }
+    .blade-action-btn.equip {
+      background: var(--color-primary);
+      color: #fff;
+    }
+    .blade-action-btn.equipped {
+      background: rgba(255,255,255,0.1);
+      color: var(--color-text-muted);
+      cursor: default;
+    }
+    .blade-action-btn.locked {
+      background: rgba(0,0,0,0.25);
+      color: rgba(255,255,255,0.25);
+      cursor: not-allowed;
+    }
+    .stat-row {
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,0.03);
+      padding: 8px 4px;
+      font-size: 0.85rem;
+    }
+    .stat-row:last-child {
+      border-bottom: none;
+    }
+    .stat-label {
+      color: var(--color-text-muted);
+    }
+    .stat-value {
+      font-weight: 700;
+      color: #fff;
+    }
+
+    @media (max-width: 360px) {
+      .menu-card {
+        padding: 24px 18px;
+        gap: 20px;
+      }
+      .logo-title {
+        font-size: 2.25rem;
+      }
+      .btn {
+        padding: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud" class="hidden">
+    <div class="hud-top-left">
+      <div id="scoreLabel">SCORE</div>
+      <div id="scoreValue">0</div>
+    </div>
+    
+    <div class="hud-top-center">
+      <div id="timerContainer" class="hidden">
+        <div id="timerLabel">TIME</div>
+        <div id="timerValue">60</div>
+      </div>
+      <div id="comboAnnouncer"></div>
+    </div>
+
+    <div class="hud-top-right">
+      <div id="livesContainer">
+        <span class="heart active"></span>
+        <span class="heart active"></span>
+        <span class="heart active"></span>
+      </div>
+      <button id="pauseButton" aria-label="Pause Game">
+        <svg viewBox="0 0 24 24"><path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <div id="overlayContainer" class="overlay-container">
+    
+    <div id="mainMenu" class="menu-card active">
+      <div class="logo-area">
+        <span class="title-bg-glow"></span>
+        <h1 class="logo-title">NINJA<span class="highlight">SLICE</span></h1>
+        <p class="logo-subtitle">A Low-Key Slice Game</p>
+        <div class="high-score-banner" style="margin-top: 10px; font-size: 0.85rem; font-weight: 600; opacity: 0.85;">
+          <span>Best: </span><span id="bestScoreVal" style="color: #facc15; font-weight: 800;">0</span>
+        </div>
+      </div>
+
+      <div class="menu-actions">
+        <button id="btnClassic" class="btn btn-primary">
+          <span class="btn-glow"></span>
+          <span class="btn-text">CLASSIC MODE</span>
+          <span class="btn-subtext">3 Lives &amp; Bombs</span>
+        </button>
+        
+        <button id="btnArcade" class="btn btn-primary">
+          <span class="btn-glow"></span>
+          <span class="btn-text">ARCADE MODE</span>
+          <span class="btn-subtext">60s Frenzy &amp; Combos</span>
+        </button>
+
+        <button id="btnZen" class="btn btn-primary">
+          <span class="btn-glow"></span>
+          <span class="btn-text">ZEN MODE</span>
+          <span class="btn-subtext">Relaxed. No Bombs, No Lives</span>
+        </button>
+      </div>
+
+      <div class="menu-footer" style="justify-content: space-around; gap: 32px;">
+        <button id="btnSettings" class="btn-icon-label" aria-label="Settings">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M12,15.5A3.5,3.5 0 0,1 8.5,12A3.5,3.5 0 0,1 12,8.5A3.5,3.5 0 0,1 15.5,12A3.5,3.5 0 0,1 12,15.5M19.43,12.97C19.47,12.65 19.5,12.33 19.5,12C19.5,11.67 19.47,11.34 19.43,11L21.54,9.37C21.73,9.22 21.78,8.95 21.66,8.73L19.66,5.27C19.54,5.05 19.27,4.96 19.05,5.05L16.56,6.05C16.04,5.66 15.47,5.34 14.86,5.08L14.47,2.42C14.43,2.18 14.22,2 13.97,2H9.97C9.72,2 9.51,2.18 9.47,2.42L9.08,5.08C8.47,5.34 7.9,5.66 7.38,6.05L4.89,5.05C4.67,4.96 4.4,5.05 4.28,5.27L2.28,8.73C2.16,8.95 2.21,9.22 2.4,9.37L4.51,11C4.47,11.34 4.45,11.67 4.45,12C4.45,12.33 4.47,12.65 4.51,12.97L2.4,14.63C2.21,14.78 2.16,15.05 2.28,15.27L4.28,18.73C4.4,18.95 4.67,19.04 4.89,18.95L7.38,17.95C7.9,18.34 8.47,18.66 9.08,18.92L9.47,21.58C9.51,21.82 9.72,22 9.97,22H13.97C14.22,22 14.43,21.82 14.47,21.58L14.86,18.92C15.47,18.66 16.04,18.34 16.56,17.95L19.05,18.95C19.27,19.04 19.54,18.95 19.66,18.73L21.66,15.27C21.78,15.05 21.73,14.78 21.54,14.63L19.43,12.97Z"/></svg>
+          <span>Settings</span>
+        </button>
+        <button id="btnDojo" class="btn-icon-label" aria-label="Dojo &amp; Blades">
+          <svg viewBox="0 0 24 24"><path fill="currentColor" d="M19.78 2.2C19.39 1.81 18.76 1.81 18.37 2.2L12.43 8.14L9.07 4.78C8.68 4.39 8.05 4.39 7.66 4.78L2.2 10.24C1.81 10.63 1.81 11.26 2.2 11.65L5.56 15.01L2.2 18.37C1.81 18.76 1.81 19.39 2.2 19.78C2.59 20.17 3.22 20.17 3.61 19.78L6.97 16.42L10.33 19.78C10.72 20.17 11.35 20.17 11.74 19.78L17.2 14.32C17.59 13.93 17.59 13.3 17.2 12.91L13.84 9.55L19.78 3.61C20.17 3.22 20.17 2.59 19.78 2.2M13.66 12.2L11.78 14.08L9.9 12.2L11.78 10.32L13.66 12.2M7.66 8.14L9.54 10.02L7.66 11.9L5.78 10.02L7.66 8.14Z"/></svg>
+          <span>Dojo</span>
+        </button>
+      </div>
+    </div>
+
+    <div id="dojoMenu" class="menu-card hidden">
+      <h2>DOJO &amp; BLADES</h2>
+      
+      <div class="dojo-tabs">
+        <button id="tabBlades" class="dojo-tab-btn active">BLADES</button>
+        <button id="tabStats" class="dojo-tab-btn">STATS</button>
+      </div>
+
+      <div id="dojoContentBlades" class="dojo-content-scroll">
+        <!-- Blade items dynamically rendered -->
+      </div>
+
+      <div id="dojoContentStats" class="dojo-content-scroll hidden">
+        <!-- Stats list -->
+      </div>
+
+      <div class="menu-actions">
+        <button id="btnDojoBack" class="btn btn-secondary">BACK</button>
+      </div>
+    </div>
+
+    <div id="pauseMenu" class="menu-card hidden">
+      <h2>GAME PAUSED</h2>
+      <div class="menu-actions">
+        <button id="btnResume" class="btn btn-secondary">RESUME</button>
+        <button id="btnRestartPause" class="btn btn-secondary">RESTART</button>
+        <button id="btnQuitPause" class="btn btn-danger">MAIN MENU</button>
+      </div>
+    </div>
+
+    <div id="settingsMenu" class="menu-card hidden">
+      <h2>SETTINGS</h2>
+      <div class="settings-content">
+        <div class="settings-row">
+          <label for="toggleSFX">Sound Effects (SFX)</label>
+          <div class="toggle-switch">
+            <input type="checkbox" id="toggleSFX" checked>
+            <span class="slider"></span>
+          </div>
+        </div>
+        <div class="settings-row">
+          <button id="btnResetScore" class="btn btn-danger btn-sm">Reset All High Scores</button>
+        </div>
+        <div class="how-to-play">
+          <h3>How to Play</h3>
+          <p>👉 Swipe your finger (or drag mouse) across fruits to slice them.</p>
+          <p>💣 Avoid slicing the BOMBS! (In Classic &amp; Arcade)</p>
+          <p>🍎 Slice multiple fruits in one swipe for Combo multipliers!</p>
+          <p>❤️ Don't miss fruits in Classic mode, or you'll lose lives.</p>
+        </div>
+      </div>
+      <div class="menu-actions">
+        <button id="btnSettingsBack" class="btn btn-secondary">BACK</button>
+      </div>
+    </div>
+
+    <div id="gameOverMenu" class="menu-card hidden">
+      <h2 id="gameOverTitle">GAME OVER</h2>
+      <p id="gameOverMode" class="text-glow">Classic Mode</p>
+      
+      <div class="score-display">
+        <div class="score-block">
+          <span class="block-label">FINAL SCORE</span>
+          <span id="finalScoreVal" class="block-val">0</span>
+        </div>
+        <div class="score-block hidden" id="newBestBadge">
+          <span class="badge-text">NEW BEST!</span>
+        </div>
+      </div>
+
+      <div class="menu-actions">
+        <button id="btnRestartOver" class="btn btn-primary">PLAY AGAIN</button>
+        <button id="btnQuitOver" class="btn btn-secondary">MAIN MENU</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Audio synthesizers class definition -->
+  <script>
+    class SoundController {
+      constructor() {
+        this.ctx = null;
+        this.enabled = true;
+        this.noiseBuffer = null;
+      }
+
+      init() {
+        if (this.ctx) return;
+        try {
+          const AudioCtx = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioCtx();
+          this.generateNoiseBuffer();
+        } catch (e) {
+          console.warn("Web Audio API is not supported:", e);
+        }
+      }
+
+      resume() {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      generateNoiseBuffer() {
+        if (!this.ctx) return;
+        const bufferSize = this.ctx.sampleRate * 0.4;
+        this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = this.noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+      }
+
+      setEnabled(val) {
+        this.enabled = val;
+        if (val) {
+          this.init();
+          this.resume();
+        }
+      }
+
+      playSwoosh(bladeStyle = 'classic') {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+        
+        const noiseNode = this.ctx.createBufferSource();
+        noiseNode.buffer = this.noiseBuffer;
+
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.Q.value = 3;
+        
+        let startFreq = 1400;
+        let endFreq = 300;
+        let noiseVol = 0.35;
+        let swooshDuration = 0.18;
+        let oscType = 'triangle';
+        let oscStartFreq = 120;
+        let oscEndFreq = 50;
+        let oscVol = 0.12;
+
+        if (bladeStyle === 'FIRE') {
+          startFreq = 900;
+          endFreq = 200;
+          noiseVol = 0.45;
+          oscStartFreq = 90;
+          oscEndFreq = 30;
+          oscVol = 0.18;
+        } else if (bladeStyle === 'ICE') {
+          startFreq = 2200;
+          endFreq = 700;
+          noiseVol = 0.25;
+          oscStartFreq = 200;
+          oscEndFreq = 120;
+          oscType = 'sine';
+          oscVol = 0.08;
+        } else if (bladeStyle === 'RAINBOW') {
+          startFreq = 1600;
+          endFreq = 500;
+          oscStartFreq = 160;
+          oscEndFreq = 90;
+          oscVol = 0.15;
+        } else if (bladeStyle === 'SHADOW') {
+          startFreq = 600;
+          endFreq = 100;
+          noiseVol = 0.5;
+          oscStartFreq = 70;
+          oscEndFreq = 25;
+          oscVol = 0.25;
+        }
+
+        noiseFilter.frequency.setValueAtTime(startFreq, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(endFreq, now + swooshDuration);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.0, now);
+        noiseGain.gain.linearRampToValueAtTime(noiseVol, now + 0.04);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + swooshDuration);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        
+        noiseNode.start(now);
+        noiseNode.stop(now + swooshDuration + 0.02);
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        
+        osc.type = oscType;
+        osc.frequency.setValueAtTime(oscStartFreq, now);
+        osc.frequency.exponentialRampToValueAtTime(oscEndFreq, now + swooshDuration - 0.03);
+
+        oscGain.gain.setValueAtTime(oscVol, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, now + swooshDuration - 0.03);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + swooshDuration - 0.02);
+      }
+
+      playSplat(bladeStyle = 'classic') {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+
+        const noiseNode = this.ctx.createBufferSource();
+        noiseNode.buffer = this.noiseBuffer;
+
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'bandpass';
+        noiseFilter.Q.value = 5;
+        
+        let startFreq = 2200;
+        let endFreq = 600;
+        let splatVol = 0.5;
+
+        if (bladeStyle === 'FIRE') {
+          startFreq = 1800;
+          endFreq = 400;
+          splatVol = 0.6;
+        } else if (bladeStyle === 'ICE') {
+          startFreq = 3500;
+          endFreq = 1200;
+          splatVol = 0.35;
+        } else if (bladeStyle === 'SHADOW') {
+          startFreq = 1000;
+          endFreq = 200;
+          splatVol = 0.7;
+        }
+
+        noiseFilter.frequency.setValueAtTime(startFreq, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(endFreq, now + 0.12);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.0, now);
+        noiseGain.gain.linearRampToValueAtTime(splatVol, now + 0.02);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+        
+        noiseNode.start(now);
+        noiseNode.stop(now + 0.18);
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+
+        osc.type = bladeStyle === 'ICE' ? 'triangle' : 'sine';
+        let oscStart = 220;
+        let oscEnd = 60;
+
+        if (bladeStyle === 'FIRE') {
+          oscStart = 180;
+          oscEnd = 40;
+        } else if (bladeStyle === 'ICE') {
+          oscStart = 380;
+          oscEnd = 180;
+        } else if (bladeStyle === 'SHADOW') {
+          oscStart = 120;
+          oscEnd = 30;
+        }
+
+        osc.frequency.setValueAtTime(oscStart, now);
+        osc.frequency.exponentialRampToValueAtTime(oscEnd, now + 0.15);
+
+        oscGain.gain.setValueAtTime(0.35, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
+
+        osc.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.16);
+
+        if (bladeStyle === 'FIRE') {
+          const fireOsc = this.ctx.createOscillator();
+          const fireGain = this.ctx.createGain();
+          fireOsc.type = 'sawtooth';
+          fireOsc.frequency.setValueAtTime(800, now);
+          fireOsc.frequency.linearRampToValueAtTime(100, now + 0.1);
+          fireGain.gain.setValueAtTime(0.08, now);
+          fireGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+          fireOsc.connect(fireGain);
+          fireGain.connect(this.ctx.destination);
+          fireOsc.start(now);
+          fireOsc.stop(now + 0.1);
+        } else if (bladeStyle === 'ICE') {
+          const chimeOsc = this.ctx.createOscillator();
+          const chimeGain = this.ctx.createGain();
+          chimeOsc.type = 'sine';
+          chimeOsc.frequency.setValueAtTime(1200, now);
+          chimeOsc.frequency.linearRampToValueAtTime(2000, now + 0.08);
+          chimeGain.gain.setValueAtTime(0.12, now);
+          chimeGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+          chimeOsc.connect(chimeGain);
+          chimeGain.connect(this.ctx.destination);
+          chimeOsc.start(now);
+          chimeOsc.stop(now + 0.08);
+        }
+      }
+
+      playCritical() {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+        
+        const osc1 = this.ctx.createOscillator();
+        const osc2 = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(880, now);
+        osc1.frequency.exponentialRampToValueAtTime(1760, now + 0.35);
+        
+        osc2.type = 'triangle';
+        osc2.frequency.setValueAtTime(440, now);
+        osc2.frequency.exponentialRampToValueAtTime(1320, now + 0.35);
+
+        gain.gain.setValueAtTime(0.3, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+        
+        osc1.connect(gain);
+        osc2.connect(gain);
+        gain.connect(this.ctx.destination);
+        
+        osc1.start(now);
+        osc2.start(now);
+        osc1.stop(now + 0.36);
+        osc2.stop(now + 0.36);
+      }
+
+      playExplosion() {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+
+        const osc = this.ctx.createOscillator();
+        const oscGain = this.ctx.createGain();
+        const oscFilter = this.ctx.createBiquadFilter();
+
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.linearRampToValueAtTime(25, now + 0.8);
+
+        oscFilter.type = 'lowpass';
+        oscFilter.frequency.setValueAtTime(300, now);
+        oscFilter.frequency.exponentialRampToValueAtTime(40, now + 0.6);
+
+        oscGain.gain.setValueAtTime(0.65, now);
+        oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.95);
+
+        osc.connect(oscFilter);
+        oscFilter.connect(oscGain);
+        oscGain.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 1.0);
+
+        const noiseNode = this.ctx.createBufferSource();
+        noiseNode.buffer = this.noiseBuffer;
+
+        const noiseFilter = this.ctx.createBiquadFilter();
+        noiseFilter.type = 'lowpass';
+        noiseFilter.frequency.setValueAtTime(1800, now);
+        noiseFilter.frequency.exponentialRampToValueAtTime(100, now + 0.7);
+
+        const noiseGain = this.ctx.createGain();
+        noiseGain.gain.setValueAtTime(0.55, now);
+        noiseGain.gain.exponentialRampToValueAtTime(0.01, now + 0.8);
+
+        noiseNode.connect(noiseFilter);
+        noiseFilter.connect(noiseGain);
+        noiseGain.connect(this.ctx.destination);
+
+        noiseNode.start(now);
+        noiseNode.stop(now + 0.8);
+      }
+
+      playFuse() {
+        if (!this.enabled || !this.ctx) return null;
+        this.resume();
+        const now = this.ctx.currentTime;
+        
+        const noiseNode = this.ctx.createBufferSource();
+        noiseNode.buffer = this.noiseBuffer;
+        noiseNode.loop = true;
+
+        const filter = this.ctx.createBiquadFilter();
+        filter.type = 'highpass';
+        filter.frequency.setValueAtTime(4000, now);
+
+        const gain = this.ctx.createGain();
+        gain.gain.setValueAtTime(0.06, now);
+
+        noiseNode.connect(filter);
+        filter.connect(gain);
+        gain.connect(this.ctx.destination);
+
+        noiseNode.start(now);
+
+        return {
+          stop: () => {
+            try {
+              noiseNode.stop();
+            } catch(e) {}
+          }
+        };
+      }
+
+      playCombo(count) {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+        const scale = [261.63, 293.66, 329.63, 392.00, 440.00, 523.25, 587.33];
+        const pitches = [];
+
+        const notesToPlay = Math.min(count, 6);
+        for (let i = 0; i < notesToPlay; i++) {
+          pitches.push(scale[i % scale.length]);
+        }
+
+        pitches.forEach((freq, idx) => {
+          const timeOffset = idx * 0.07;
+          const noteTime = now + timeOffset;
+
+          const osc = this.ctx.createOscillator();
+          const gainNode = this.ctx.createGain();
+
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, noteTime);
+
+          gainNode.gain.setValueAtTime(0.0, noteTime);
+          gainNode.gain.linearRampToValueAtTime(0.2, noteTime + 0.02);
+          gainNode.gain.exponentialRampToValueAtTime(0.001, noteTime + 0.35);
+
+          osc.connect(gainNode);
+          gainNode.connect(this.ctx.destination);
+
+          osc.start(noteTime);
+          osc.stop(noteTime + 0.4);
+        });
+      }
+
+      playBlitzSpawn() {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gainNode = this.ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(1200, now + 0.3);
+
+        gainNode.gain.setValueAtTime(0.0, now);
+        gainNode.gain.linearRampToValueAtTime(0.18, now + 0.05);
+        gainNode.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+        osc.connect(gainNode);
+        gainNode.connect(this.ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.4);
+      }
+    }
+
+    const gameAudio = new SoundController();
+  </script>
+
+  <!-- Core Game Engine Loop script -->
+  <script>
+    const GRAVITY = 0.28;
+    const MAX_FRUITS_ON_SCREEN = 8;
+    const MIN_LAUNCH_INTERVAL = 800;
+
+        const FRUIT_TYPES = {
+      WATERMELON: { name: 'Watermelon', radius: 45, color: '#ef4444' },
+      ORANGE:     { name: 'Orange',     radius: 36, color: '#f97316' },
+      APPLE:      { name: 'Apple',      radius: 34, color: '#eab308' },
+      BANANA:     { name: 'Banana',     radius: 32, color: '#fef08a' },
+      COCONUT:    { name: 'Coconut',    radius: 38, color: '#ffffff' },
+      PINEAPPLE:  { name: 'Pineapple',  radius: 42, color: '#fbbf24' },
+      PEACH:      { name: 'Peach',      radius: 35, color: '#fbcfe8' },
+      KIWI:       { name: 'Kiwi',       radius: 31, color: '#a3e635' }
+    };
+
+    const BLITZ_TYPES = {
+      FREEZE: { name: 'Freeze', radius: 36, color: '#06b6d4', effect: 'freeze' },
+      FRENZY: { name: 'Frenzy', radius: 36, color: '#ec4899', effect: 'frenzy' },
+      DOUBLE: { name: 'Double', radius: 36, color: '#a855f7', effect: 'double' }
+    };
+
+    const BLADES = {
+      CLASSIC: {
+        id: 'CLASSIC',
+        name: 'Classic Blade',
+        desc: 'The original ninja slash. Simple and precise.',
+        icon: '⚔️',
+        color: '#ffffff',
+        shadowColor: '#a855f7',
+        particleType: 'classic',
+        unlockDesc: 'Default blade'
+      },
+      FIRE: {
+        id: 'FIRE',
+        name: 'Fire Blade',
+        desc: 'Ignite the dojo. Slashes leave rising fire embers.',
+        icon: '🔥',
+        color: '#f97316',
+        shadowColor: '#ef4444',
+        particleType: 'fire',
+        unlockDesc: 'Slice 100 fruits total'
+      },
+      ICE: {
+        id: 'ICE',
+        name: 'Ice Blade',
+        desc: 'Frostbite slash. Sparkles down snow-white frost.',
+        icon: '❄️',
+        color: '#e0f2fe',
+        shadowColor: '#06b6d4',
+        particleType: 'ice',
+        unlockDesc: 'Score 150+ in Zen mode'
+      },
+      RAINBOW: {
+        id: 'RAINBOW',
+        name: 'Rainbow Blade',
+        desc: 'Taste the rainbow. Color-shifting trail with confetti.',
+        icon: '🌈',
+        color: 'rainbow',
+        shadowColor: 'rainbow',
+        particleType: 'rainbow',
+        unlockDesc: 'Get a 5-fruit combo'
+      },
+      SHADOW: {
+        id: 'SHADOW',
+        name: 'Shadow Blade',
+        desc: 'Slice through dimensions. Leaves a trail of dark void smoke.',
+        icon: '🌌',
+        color: '#1e1b4b',
+        shadowColor: '#4c1d95',
+        particleType: 'shadow',
+        unlockDesc: 'Score 80+ in Arcade with 0 bombs hit'
+      }
+    };
+
+    function getDistPointToSegment(px, py, x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      
+      if (lenSq === 0) {
+        const dX = px - x1;
+        const dY = py - y1;
+        return Math.sqrt(dX * dX + dY * dY);
+      }
+      
+      let t = ((px - x1) * dx + (py - y1) * dy) / lenSq;
+      t = Math.max(0, Math.min(1, t));
+      
+      const qx = x1 + t * dx;
+      const qy = y1 + t * dy;
+      const diffX = px - qx;
+      const diffY = py - qy;
+      return Math.sqrt(diffX * diffX + diffY * diffY);
+    }
+
+    class JuiceSplatter {
+      constructor(x, y, color) {
+        this.x = x;
+        this.y = y;
+        this.color = color;
+        this.radius = 20 + Math.random() * 25;
+        this.alpha = 0.55;
+        this.decay = 0.0015 + Math.random() * 0.002;
+        this.droplets = [];
+        
+        const dropletCount = 3 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < dropletCount; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const dist = this.radius * (0.5 + Math.random() * 0.8);
+          const canDrip = Math.random() < 0.45;
+          this.droplets.push({
+            dx: Math.cos(angle) * dist,
+            dy: Math.sin(angle) * dist,
+            r: 2.5 + Math.random() * 5,
+            dripY: 0,
+            dripSpeed: canDrip ? 0.15 + Math.random() * 0.3 : 0
+          });
+        }
+      }
+
+      update(dt) {
+        this.alpha -= this.decay * dt;
+        this.droplets.forEach(d => {
+          if (d.dripSpeed > 0) {
+            d.dripY += d.dripSpeed * dt;
+          }
+        });
+        return this.alpha > 0;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        this.droplets.forEach(d => {
+          if (d.dripSpeed > 0) {
+            ctx.beginPath();
+            ctx.arc(this.x + d.dx, this.y + d.dy + d.dripY, d.r, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.rect(this.x + d.dx - d.r * 0.5, this.y + d.dy, d.r, d.dripY);
+            ctx.fill();
+          } else {
+            ctx.beginPath();
+            ctx.arc(this.x + d.dx, this.y + d.dy, d.r, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        });
+        
+        ctx.restore();
+      }
+    }
+
+    class PhysicsParticle {
+      constructor(x, y, vx, vy, color, size, type = 'juice', bladeStyle = 'classic') {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.color = color;
+        this.size = size;
+        this.alpha = 1.0;
+        this.decay = type === 'fuse' ? 0.08 : 0.025;
+        this.type = type;
+        this.bladeStyle = bladeStyle;
+        
+        if (type === 'blade') {
+          if (bladeStyle === 'FIRE') {
+            this.decay = 0.045;
+          } else if (bladeStyle === 'ICE') {
+            this.decay = 0.035;
+          } else if (bladeStyle === 'RAINBOW') {
+            this.decay = 0.04;
+          } else if (bladeStyle === 'SHADOW') {
+            this.decay = 0.02;
+          }
+        }
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        
+        if (this.type === 'juice') {
+          this.vy += GRAVITY * 0.7 * dt;
+          this.vx *= Math.pow(0.97, dt);
+        } else if (this.type === 'fuse') {
+          this.vx *= Math.pow(0.95, dt);
+          this.vy *= Math.pow(0.95, dt);
+        } else if (this.type === 'blade') {
+          this.vx *= Math.pow(0.9, dt);
+          this.vy *= Math.pow(0.9, dt);
+          
+          if (this.bladeStyle === 'FIRE') {
+            this.vy -= 0.12 * dt;
+            this.vx += (Math.random() - 0.5) * 0.2 * dt;
+          } else if (this.bladeStyle === 'ICE') {
+            this.vy += 0.04 * dt;
+            this.vx += Math.sin(this.y * 0.05) * 0.08 * dt;
+          } else if (this.bladeStyle === 'RAINBOW') {
+            this.vy += (Math.random() - 0.5) * 0.1 * dt;
+            this.vx += (Math.random() - 0.5) * 0.1 * dt;
+          } else if (this.bladeStyle === 'SHADOW') {
+            this.size += 0.22 * dt;
+            this.vx *= Math.pow(0.85, dt);
+            this.vy *= Math.pow(0.85, dt);
+          }
+        }
+        
+        this.alpha -= this.decay * dt;
+        return this.alpha > 0;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.fillStyle = this.color;
+        
+        if (this.type === 'blade') {
+          ctx.shadowBlur = this.bladeStyle === 'SHADOW' ? 6 : 12;
+          ctx.shadowColor = this.color;
+        }
+        
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(0.1, this.size), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    class SlicedHalf {
+      constructor(x, y, vx, vy, sliceAngle, spin, radius, type, isBlitz = false) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.sliceAngle = sliceAngle;
+        this.spin = spin;
+        this.spinSpeed = 0.05 + Math.random() * 0.1;
+        this.radius = radius;
+        this.type = type;
+        this.isBlitz = isBlitz;
+        this.side = Math.random() < 0.5 ? 'left' : 'right';
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += GRAVITY * dt;
+        this.spin += this.spinSpeed * dt;
+        return this.y < window.innerHeight + 100;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.sliceAngle + this.spin);
+        
+        ctx.beginPath();
+        if (this.side === 'left') {
+          ctx.rect(-this.radius * 3, -this.radius * 3, this.radius * 3, this.radius * 6);
+        } else {
+          ctx.rect(0, -this.radius * 3, this.radius * 3, this.radius * 6);
+        }
+        ctx.clip();
+        
+        if (this.isBlitz) {
+          drawBlitzGraphics(ctx, this.radius, this.type);
+        } else {
+          drawFruitGraphics(ctx, this.radius, this.type);
+        }
+        
+        ctx.restore();
+      }
+    }
+
+    class Fruit {
+      constructor(x, y, vx, vy, type, isBlitz = false) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.isBlitz = isBlitz;
+        this.type = type;
+        
+        const info = isBlitz ? BLITZ_TYPES[type] : FRUIT_TYPES[type];
+        this.radius = info.radius;
+        this.color = info.color;
+        
+        this.spin = Math.random() * Math.PI * 2;
+        this.spinSpeed = (Math.random() - 0.5) * 0.07;
+        this.sliced = false;
+      }
+
+      update(dt) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += GRAVITY * dt;
+        this.spin += this.spinSpeed * dt;
+        return this.y < window.innerHeight + 100;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.spin);
+        
+        if (this.isBlitz) {
+          drawBlitzGraphics(ctx, this.radius, this.type);
+        } else {
+          drawFruitGraphics(ctx, this.radius, this.type);
+        }
+        
+        ctx.restore();
+      }
+    }
+
+    class Bomb {
+      constructor(x, y, vx, vy) {
+        this.x = x;
+        this.y = y;
+        this.vx = vx;
+        this.vy = vy;
+        this.radius = 36;
+        this.spin = Math.random() * Math.PI * 2;
+        this.spinSpeed = 0.04;
+        this.sliced = false;
+        this.fuseSound = null;
+      }
+
+      startFuseSound() {
+        if (!this.fuseSound) {
+          this.fuseSound = gameAudio.playFuse();
+        }
+      }
+
+      stopFuseSound() {
+        if (this.fuseSound) {
+          this.fuseSound.stop();
+          this.fuseSound = null;
+        }
+      }
+
+      update(dt, particles) {
+        this.x += this.vx * dt;
+        this.y += this.vy * dt;
+        this.vy += GRAVITY * dt;
+        this.spin += this.spinSpeed * dt;
+        
+        const fuseLength = this.radius + 15;
+        const fuseAngle = this.spin - Math.PI / 2 + 0.3;
+        const sparkX = this.x + Math.cos(fuseAngle) * fuseLength;
+        const sparkY = this.y + Math.sin(fuseAngle) * fuseLength;
+        
+        if (Math.random() < 0.65) {
+          particles.push(new PhysicsParticle(
+            sparkX, sparkY, 
+            (Math.random() - 0.5) * 3, 
+            (Math.random() - 0.5) * 3 - 2, 
+            Math.random() < 0.5 ? '#facc15' : '#ef4444', 
+            2 + Math.random() * 3,
+            'fuse'
+          ));
+        }
+        
+        return this.y < window.innerHeight + 100;
+      }
+
+      draw(ctx) {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.spin);
+        
+        const grad = ctx.createRadialGradient(-this.radius * 0.3, -this.radius * 0.3, 2, 0, 0, this.radius);
+        grad.addColorStop(0, '#52525b');
+        grad.addColorStop(0.8, '#1e1b4b');
+        grad.addColorStop(1, '#090d16');
+        ctx.fillStyle = grad;
+        
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.4)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius - 4, 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(0, 0, this.radius * 0.35, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '800 12px ' + getComputedStyle(document.body).getPropertyValue('--font-ui');
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('X', 0, 0);
+        
+        ctx.fillStyle = '#71717a';
+        ctx.fillRect(-6, -this.radius - 3, 12, 6);
+        
+        ctx.beginPath();
+        ctx.moveTo(0, -this.radius - 3);
+        ctx.quadraticCurveTo(15, -this.radius - 12, 10, -this.radius - 20);
+        ctx.strokeStyle = '#b45309';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        ctx.restore();
+      }
+    }
+
+    function drawFruitGraphics(ctx, r, type) {
+      switch (type) {
+        case 'WATERMELON':
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#16a34a';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#fef08a';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 8, 0, Math.PI * 2);
+          ctx.fillStyle = '#dc2626';
+          ctx.fill();
+          
+          ctx.fillStyle = '#171717';
+          const seeds = [
+            {x:-12, y:-12}, {x:12, y:-12}, {x:-18, y:6}, {x:18, y:6}, {x:0, y:-18}, {x:0, y:12}
+          ];
+          seeds.forEach(s => {
+            ctx.beginPath();
+            ctx.ellipse(s.x, s.y, 2.5, 4, Math.PI / 4, 0, Math.PI * 2);
+            ctx.fill();
+          });
+          break;
+
+        case 'ORANGE':
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#ea580c';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 4, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffedd5';
+          ctx.fill();
+          
+          ctx.fillStyle = '#f97316';
+          for (let i = 0; i < 8; i++) {
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.arc(0, 0, r - 5, (i * Math.PI / 4) + 0.08, ((i + 1) * Math.PI / 4) - 0.08);
+            ctx.closePath();
+            ctx.fill();
+          }
+          break;
+
+        case 'APPLE':
+          ctx.beginPath();
+          ctx.arc(-r * 0.25, -r * 0.1, r * 0.75, 0, Math.PI * 2);
+          ctx.arc(r * 0.25, -r * 0.1, r * 0.75, 0, Math.PI * 2);
+          ctx.fillStyle = '#e11d48';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(-r * 0.25, -r * 0.1, r * 0.65, 0, Math.PI * 2);
+          ctx.arc(r * 0.25, -r * 0.1, r * 0.65, 0, Math.PI * 2);
+          ctx.fillStyle = '#fef9c3';
+          ctx.fill();
+
+          ctx.fillStyle = '#78350f';
+          ctx.beginPath();
+          ctx.ellipse(-4, 0, 1.5, 3, -Math.PI / 6, 0, Math.PI * 2);
+          ctx.ellipse(4, 0, 1.5, 3, Math.PI / 6, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.moveTo(0, -r * 0.6);
+          ctx.quadraticCurveTo(r * 0.3, -r * 1.1, r * 0.4, -r * 1.0);
+          ctx.lineWidth = 3;
+          ctx.strokeStyle = '#451a03';
+          ctx.stroke();
+
+          ctx.beginPath();
+          ctx.ellipse(r * 0.35, -r * 1.0, 3, 7, Math.PI / 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#22c55e';
+          ctx.fill();
+          break;
+
+        case 'COCONUT':
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#451a03';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 5, 0, Math.PI * 2);
+          ctx.fillStyle = '#ffffff';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 15, 0, Math.PI * 2);
+          ctx.fillStyle = '#f8fafc';
+          ctx.fill();
+          break;
+
+        case 'BANANA':
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.9, -r * 0.3);
+          ctx.quadraticCurveTo(0, r * 0.9, r * 0.9, -r * 0.3);
+          ctx.quadraticCurveTo(0, r * 0.4, -r * 0.9, -r * 0.3);
+          ctx.closePath();
+          ctx.fillStyle = '#facc15';
+          ctx.fill();
+          
+          ctx.beginPath();
+          ctx.moveTo(-r * 0.8, -r * 0.2);
+          ctx.quadraticCurveTo(0, r * 0.7, r * 0.8, -r * 0.2);
+          ctx.strokeStyle = '#fef08a';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = '#3f220f';
+          ctx.beginPath();
+          ctx.arc(-r * 0.9, -r * 0.3, 3.5, 0, Math.PI * 2);
+          ctx.arc(r * 0.9, -r * 0.3, 3, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case 'PINEAPPLE':
+          ctx.beginPath();
+          ctx.ellipse(0, 5, r * 0.75, r, 0, 0, Math.PI * 2);
+          ctx.fillStyle = '#d97706';
+          ctx.fill();
+
+          ctx.save();
+          ctx.beginPath();
+          ctx.ellipse(0, 5, r * 0.75, r, 0, 0, Math.PI * 2);
+          ctx.clip();
+          ctx.strokeStyle = '#f59e0b';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          for (let x = -r; x < r; x += 10) {
+            ctx.moveTo(x - r, -r);
+            ctx.lineTo(x + r, r * 2);
+            ctx.moveTo(x + r, -r);
+            ctx.lineTo(x - r, r * 2);
+          }
+          ctx.stroke();
+          ctx.restore();
+
+          ctx.fillStyle = '#16a34a';
+          for (let i = -2; i <= 2; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * 6, -r * 0.85);
+            ctx.lineTo(i * 13, -r * 1.55);
+            ctx.lineTo(i * 6 + 6, -r * 0.85);
+            ctx.closePath();
+            ctx.fill();
+          }
+          break;
+
+        case 'PEACH':
+          ctx.beginPath();
+          ctx.arc(-r * 0.15, 0, r * 0.85, 0, Math.PI * 2);
+          ctx.arc(r * 0.15, 0, r * 0.85, 0, Math.PI * 2);
+          ctx.fillStyle = '#f43f5e';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(-r * 0.15, 0, r * 0.78, 0, Math.PI * 2);
+          ctx.arc(r * 0.15, 0, r * 0.78, 0, Math.PI * 2);
+          ctx.fillStyle = '#fbcfe8';
+          ctx.fill();
+
+          ctx.strokeStyle = 'rgba(225, 29, 72, 0.35)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(0, -r * 0.7);
+          ctx.quadraticCurveTo(-r * 0.1, 0, 0, r * 0.7);
+          ctx.stroke();
+
+          ctx.fillStyle = '#92400e';
+          ctx.beginPath();
+          ctx.ellipse(0, 0, 3.5, 6, 0, 0, Math.PI * 2);
+          ctx.fill();
+          break;
+
+        case 'KIWI':
+          ctx.beginPath();
+          ctx.arc(0, 0, r, 0, Math.PI * 2);
+          ctx.fillStyle = '#78350f';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(0, 0, r - 3, 0, Math.PI * 2);
+          ctx.fillStyle = '#84cc16';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(0, 0, r * 0.32, 0, Math.PI * 2);
+          ctx.fillStyle = '#ecfccb';
+          ctx.fill();
+
+          ctx.fillStyle = '#171717';
+          const seedCount = 10;
+          for (let i = 0; i < seedCount; i++) {
+            const angle = (i * Math.PI * 2) / seedCount;
+            const dist = r * 0.54;
+            const sx = Math.cos(angle) * dist;
+            const sy = Math.sin(angle) * dist;
+            ctx.beginPath();
+            ctx.arc(sx, sy, 1.2, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          break;
+      }
+    }
+
+    function drawBlitzGraphics(ctx, r, type) {
+      ctx.save();
+      ctx.shadowBlur = 15;
+      ctx.shadowColor = BLITZ_TYPES[type].color;
+      
+      ctx.strokeStyle = BLITZ_TYPES[type].color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+      ctx.beginPath();
+      ctx.arc(0, 0, r - 5, 0, Math.PI * 2);
+      ctx.fill();
+      
+      ctx.fillStyle = BLITZ_TYPES[type].color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      if (type === 'FREEZE') {
+        ctx.font = '24px Arial';
+        ctx.fillText('❄', 0, 0);
+      } else if (type === 'FRENZY') {
+        ctx.font = '800 24px Arial';
+        ctx.fillText('⚡', 0, 0);
+      } else if (type === 'DOUBLE') {
+        ctx.font = '800 18px ' + getComputedStyle(document.body).getPropertyValue('--font-ui');
+        ctx.fillText('2X', 0, 0);
+      }
+      
+      ctx.restore();
+    }
+
+    class SwipeTracker {
+      constructor() {
+        this.points = [];
+        this.active = false;
+        this.color = '#ffffff';
+        this.shadowColor = '#c084fc';
+        this.bladeStyle = 'CLASSIC';
+      }
+
+      start(x, y, bladeStyle = 'CLASSIC') {
+        this.active = true;
+        this.bladeStyle = bladeStyle;
+        this.points = [{ x, y, time: Date.now() }];
+        
+        const config = BLADES[bladeStyle] || BLADES.CLASSIC;
+        this.color = config.color;
+        this.shadowColor = config.shadowColor;
+        
+        gameAudio.playSwoosh(bladeStyle);
+      }
+
+      move(x, y, particles, bladeStyle = 'CLASSIC') {
+        if (!this.active) return;
+        const now = Date.now();
+        this.bladeStyle = bladeStyle;
+        
+        const config = BLADES[bladeStyle] || BLADES.CLASSIC;
+        this.color = config.color;
+        this.shadowColor = config.shadowColor;
+        
+        if (this.points.length > 0) {
+          const last = this.points[this.points.length - 1];
+          const vx = (x - last.x) * 0.1;
+          const vy = (y - last.y) * 0.1;
+          
+          if (Math.random() < 0.4) {
+            let sparkCol = this.color;
+            if (sparkCol === 'rainbow') {
+              const hue = (Date.now() / 3) % 360;
+              sparkCol = `hsl(${hue}, 100%, 65%)`;
+            }
+            particles.push(new PhysicsParticle(
+              x, y, 
+              vx + (Math.random() - 0.5) * 2, 
+              vy + (Math.random() - 0.5) * 2, 
+              sparkCol, 
+              1 + Math.random() * 3, 
+              'blade',
+              bladeStyle
+            ));
+          }
+        }
+        
+        this.points.push({ x, y, time: now });
+      }
+
+      end() {
+        this.active = false;
+      }
+
+      update() {
+        const now = Date.now();
+        this.points = this.points.filter(p => now - p.time < 130);
+      }
+
+      draw(ctx) {
+        if (this.points.length < 2) return;
+        
+        ctx.save();
+        
+        const isRainbow = this.bladeStyle === 'RAINBOW';
+        
+        for (let i = 1; i < this.points.length; i++) {
+          const p1 = this.points[i - 1];
+          const p2 = this.points[i];
+          const progress = i / this.points.length;
+          
+          let strokeCol = this.color;
+          let shadowCol = this.shadowColor;
+          
+          if (isRainbow) {
+            const hue = (Date.now() / 3 + i * 12) % 360;
+            strokeCol = `hsl(${hue}, 100%, 75%)`;
+            shadowCol = `hsl(${hue}, 100%, 50%)`;
+          }
+          
+          ctx.shadowBlur = 14;
+          ctx.shadowColor = shadowCol;
+          
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.strokeStyle = strokeCol;
+          ctx.lineWidth = 9 * progress;
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.stroke();
+        }
+        
+        ctx.restore();
+      }
+    }
+
+    class NinjaSliceGame {
+      constructor() {
+        this.canvas = document.getElementById('gameCanvas');
+        this.ctx = this.canvas.getContext('2d');
+        
+        this.gameState = 'MENU';
+        this.gameMode = 'CLASSIC';
+        
+        this.score = 0;
+        this.lives = 3;
+        this.timer = 0;
+        
+        this.fruits = [];
+        this.slicedHalves = [];
+        this.bombs = [];
+        this.particles = [];
+        this.splatters = [];
+        this.woodCuts = [];
+        this.screenShake = 0;
+        
+        this.swipe = new SwipeTracker();
+        this.lastLaunchTime = 0;
+        this.launchInterval = MIN_LAUNCH_INTERVAL;
+        this.timeElapsed = 0;
+        
+        this.blitzFreeze = 0;
+        this.blitzFrenzy = 0;
+        this.blitzDouble = 0;
+        this.frenzySpawnTimer = 0;
+        
+        this.comboCount = 0;
+        this.lastSliceTime = 0;
+        this.currentComboFruits = [];
+        
+        this.bombsHitThisGame = 0;
+        this.stats = {
+          totalSliced: 0,
+          totalCombos: 0,
+          maxCombo: 0,
+          totalBombsHit: 0,
+          gamesPlayed: 0
+        };
+        this.unlockedBlades = ['CLASSIC'];
+        this.selectedBlade = 'CLASSIC';
+        
+        this.bestScores = {
+          CLASSIC: 0,
+          ZEN: 0,
+          ARCADE: 0
+        };
+        
+        this.loadHighScores();
+        this.setupUIHandlers();
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+        this.setupInputHandlers();
+        
+        this.lastTime = performance.now();
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      resize() {
+        this.dpr = window.devicePixelRatio || 1;
+        this.width = window.innerWidth;
+        this.height = window.innerHeight;
+        this.canvas.width = this.width * this.dpr;
+        this.canvas.height = this.height * this.dpr;
+        this.ctx.scale(this.dpr, this.dpr);
+      }
+
+      loadHighScores() {
+        try {
+          this.bestScores.CLASSIC = parseInt(localStorage.getItem('ninja_slice_best_CLASSIC')) || 0;
+          this.bestScores.ZEN = parseInt(localStorage.getItem('ninja_slice_best_ZEN')) || 0;
+          this.bestScores.ARCADE = parseInt(localStorage.getItem('ninja_slice_best_ARCADE')) || 0;
+          this.updateBestScoreDisplay();
+
+          const savedStats = localStorage.getItem('ninja_slice_stats');
+          if (savedStats) {
+            this.stats = Object.assign(this.stats, JSON.parse(savedStats));
+          }
+          
+          const savedUnlocked = localStorage.getItem('ninja_slice_unlocked');
+          if (savedUnlocked) {
+            this.unlockedBlades = JSON.parse(savedUnlocked);
+          }
+          if (!this.unlockedBlades.includes('CLASSIC')) {
+            this.unlockedBlades.push('CLASSIC');
+          }
+
+          const activeBlade = localStorage.getItem('ninja_slice_active_blade');
+          if (activeBlade && Object.keys(BLADES).includes(activeBlade)) {
+            this.selectedBlade = activeBlade;
+          }
+        } catch(e) {
+          console.warn("Storage restricted:", e);
+        }
+      }
+
+      saveHighScore(mode, val) {
+        if (val > this.bestScores[mode]) {
+          this.bestScores[mode] = val;
+          try {
+            localStorage.setItem('ninja_slice_best_' + mode, val);
+          } catch(e) {}
+          this.updateBestScoreDisplay();
+          return true;
+        }
+        return false;
+      }
+
+      updateBestScoreDisplay() {
+        const currentModeBest = this.bestScores[this.gameMode];
+        document.getElementById('bestScoreVal').innerText = currentModeBest;
+      }
+
+      setupUIHandlers() {
+        document.getElementById('btnClassic').addEventListener('click', () => this.startGame('CLASSIC'));
+        document.getElementById('btnZen').addEventListener('click', () => this.startGame('ZEN'));
+        document.getElementById('btnArcade').addEventListener('click', () => this.startGame('ARCADE'));
+        
+        document.getElementById('btnSettings').addEventListener('click', () => this.showScreen('settingsMenu'));
+        document.getElementById('btnSettingsBack').addEventListener('click', () => this.showScreen('mainMenu'));
+        
+        document.getElementById('btnDojo').addEventListener('click', () => {
+          this.renderDojoMenu();
+          this.showScreen('dojoMenu');
+        });
+        document.getElementById('btnDojoBack').addEventListener('click', () => {
+          this.showScreen('mainMenu');
+        });
+        
+        const tabBlades = document.getElementById('tabBlades');
+        const tabStats = document.getElementById('tabStats');
+        const contentBlades = document.getElementById('dojoContentBlades');
+        const contentStats = document.getElementById('dojoContentStats');
+
+        tabBlades.addEventListener('click', () => {
+          tabBlades.classList.add('active');
+          tabStats.classList.remove('active');
+          contentBlades.classList.remove('hidden');
+          contentStats.classList.add('hidden');
+        });
+
+        tabStats.addEventListener('click', () => {
+          tabStats.classList.add('active');
+          tabBlades.classList.remove('active');
+          contentStats.classList.remove('hidden');
+          contentBlades.classList.add('hidden');
+        });
+
+        const toggle = document.getElementById('toggleSFX');
+        toggle.checked = gameAudio.enabled;
+        toggle.addEventListener('change', (e) => {
+          gameAudio.setEnabled(e.target.checked);
+        });
+
+        document.getElementById('btnResetScore').addEventListener('click', () => {
+          if (confirm('Are you sure you want to delete all saved best scores and stats?')) {
+            this.bestScores = { CLASSIC: 0, ZEN: 0, ARCADE: 0 };
+            this.stats = { totalSliced: 0, totalCombos: 0, maxCombo: 0, totalBombsHit: 0, gamesPlayed: 0 };
+            this.unlockedBlades = ['CLASSIC'];
+            this.selectedBlade = 'CLASSIC';
+            try {
+              localStorage.removeItem('ninja_slice_best_CLASSIC');
+              localStorage.removeItem('ninja_slice_best_ZEN');
+              localStorage.removeItem('ninja_slice_best_ARCADE');
+              localStorage.removeItem('ninja_slice_stats');
+              localStorage.removeItem('ninja_slice_unlocked');
+              localStorage.removeItem('ninja_slice_active_blade');
+            } catch(e) {}
+            this.updateBestScoreDisplay();
+            alert('High scores and dojo stats cleared!');
+          }
+        });
+
+        document.getElementById('pauseButton').addEventListener('click', () => this.pauseGame());
+        document.getElementById('btnResume').addEventListener('click', () => this.resumeGame());
+        document.getElementById('btnRestartPause').addEventListener('click', () => this.startGame(this.gameMode));
+        document.getElementById('btnQuitPause').addEventListener('click', () => this.quitToMenu());
+
+        document.getElementById('btnRestartOver').addEventListener('click', () => this.startGame(this.gameMode));
+        document.getElementById('btnQuitOver').addEventListener('click', () => this.quitToMenu());
+      }
+
+      showScreen(screenId) {
+        const cards = document.querySelectorAll('.menu-card');
+        cards.forEach(c => c.classList.remove('active'));
+        
+        const activeCard = document.getElementById(screenId);
+        if (activeCard) {
+          activeCard.classList.add('active');
+        }
+        
+        const bgGlow = document.querySelector('.title-bg-glow');
+        if (screenId === 'gameOverMenu') {
+          if (bgGlow) bgGlow.style.background = 'var(--color-danger)';
+        } else {
+          if (bgGlow) bgGlow.style.background = 'var(--color-primary)';
+        }
+      }
+
+      setupInputHandlers() {
+        const getPointerPos = (e) => {
+          const rect = this.canvas.getBoundingClientRect();
+          const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+          const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+          return {
+            x: clientX - rect.left,
+            y: clientY - rect.top
+          };
+        };
+
+        const onStart = (e) => {
+          if (this.gameState !== 'PLAYING') return;
+          gameAudio.init();
+          const pos = getPointerPos(e);
+          this.swipe.start(pos.x, pos.y, this.selectedBlade);
+        };
+
+        const onMove = (e) => {
+          if (this.gameState !== 'PLAYING' || !this.swipe.active) return;
+          const pos = getPointerPos(e);
+          
+          if (this.swipe.points.length > 0) {
+            const last = this.swipe.points[this.swipe.points.length - 1];
+            const dx = pos.x - last.x;
+            const dy = pos.y - last.y;
+            if (dx * dx + dy * dy > 25) {
+              this.woodCuts.push({
+                x1: last.x,
+                y1: last.y,
+                x2: pos.x,
+                y2: pos.y,
+                width: 3.5 + Math.random() * 2.0,
+                life: 1200,
+                maxLife: 1200
+              });
+            }
+          }
+          
+          this.swipe.move(pos.x, pos.y, this.particles, this.selectedBlade);
+          this.detectCollisions();
+        };
+
+        const onEnd = () => {
+          this.swipe.end();
+          this.checkAndTriggerCombo();
+        };
+
+        window.addEventListener('mousedown', onStart);
+        window.addEventListener('mousemove', onMove);
+        window.addEventListener('mouseup', onEnd);
+
+        window.addEventListener('touchstart', onStart, { passive: false });
+        window.addEventListener('touchmove', onMove, { passive: false });
+        window.addEventListener('touchend', onEnd, { passive: false });
+      }
+
+      startGame(mode) {
+        gameAudio.init();
+        
+        this.gameState = 'PLAYING';
+        this.gameMode = mode;
+        this.score = 0;
+        this.timeElapsed = 0;
+        this.bombsHitThisGame = 0;
+        
+        this.fruits = [];
+        this.slicedHalves = [];
+        this.bombs = [];
+        this.particles = [];
+        this.splatters = [];
+        this.woodCuts = [];
+        this.swipe.end();
+        this.screenShake = 0;
+        
+        this.blitzFreeze = 0;
+        this.blitzFrenzy = 0;
+        this.blitzDouble = 0;
+        this.launchInterval = MIN_LAUNCH_INTERVAL;
+        this.lastLaunchTime = Date.now();
+        
+        document.getElementById('hud').classList.remove('hidden');
+        document.getElementById('scoreValue').innerText = '0';
+        
+        const livesNode = document.getElementById('livesContainer');
+        const timerNode = document.getElementById('timerContainer');
+        
+        if (mode === 'CLASSIC') {
+          this.lives = 3;
+          livesNode.style.display = 'flex';
+          timerNode.classList.add('hidden');
+          this.renderHearts();
+        } else if (mode === 'ZEN') {
+          this.lives = 0;
+          this.timer = 90000;
+          livesNode.style.display = 'none';
+          timerNode.classList.remove('hidden');
+          this.updateTimerDisplay();
+        } else if (mode === 'ARCADE') {
+          this.lives = 0;
+          this.timer = 60000;
+          livesNode.style.display = 'none';
+          timerNode.classList.remove('hidden');
+          this.updateTimerDisplay();
+        }
+        
+        document.getElementById('overlayContainer').style.pointerEvents = 'none';
+        this.showScreen('hidden');
+      }
+
+      pauseGame() {
+        if (this.gameState !== 'PLAYING') return;
+        this.gameState = 'PAUSED';
+        this.bombs.forEach(b => b.stopFuseSound());
+        
+        document.getElementById('overlayContainer').style.pointerEvents = 'auto';
+        this.showScreen('pauseMenu');
+      }
+
+      resumeGame() {
+        if (this.gameState !== 'PAUSED') return;
+        this.gameState = 'PLAYING';
+        this.bombs.forEach(b => b.startFuseSound());
+        
+        document.getElementById('overlayContainer').style.pointerEvents = 'none';
+        this.showScreen('hidden');
+      }
+
+      quitToMenu() {
+        this.gameState = 'MENU';
+        this.bombs.forEach(b => b.stopFuseSound());
+        
+        document.getElementById('hud').classList.add('hidden');
+        document.getElementById('overlayContainer').style.pointerEvents = 'auto';
+        this.updateBestScoreDisplay();
+        this.showScreen('mainMenu');
+      }
+
+      endGame() {
+        this.gameState = 'GAMEOVER';
+        this.swipe.end();
+        this.bombs.forEach(b => b.stopFuseSound());
+        
+        const newBest = this.saveHighScore(this.gameMode, this.score);
+        
+        this.stats.gamesPlayed++;
+        this.saveStats();
+        
+        const gameEndInfo = {
+          mode: this.gameMode,
+          score: this.score,
+          bombsHit: this.bombsHitThisGame
+        };
+        this.checkAchievements(gameEndInfo);
+        
+        document.getElementById('finalScoreVal').innerText = this.score;
+        document.getElementById('gameOverMode').innerText = this.gameMode.toUpperCase() + ' MODE';
+        
+        const bestBadge = document.getElementById('newBestBadge');
+        if (newBest) {
+          bestBadge.classList.remove('hidden');
+        } else {
+          bestBadge.classList.add('hidden');
+        }
+        
+        document.getElementById('overlayContainer').style.pointerEvents = 'auto';
+        this.showScreen('gameOverMenu');
+      }
+
+      renderHearts() {
+        const hearts = document.querySelectorAll('.heart');
+        hearts.forEach((h, index) => {
+          if (index < this.lives) {
+            h.className = 'heart active';
+          } else {
+            h.className = 'heart lost';
+          }
+        });
+      }
+
+      saveStats() {
+        try {
+          localStorage.setItem('ninja_slice_stats', JSON.stringify(this.stats));
+        } catch(e) {}
+      }
+
+      saveUnlockedBlades() {
+        try {
+          localStorage.setItem('ninja_slice_unlocked', JSON.stringify(this.unlockedBlades));
+        } catch(e) {}
+      }
+
+      equipBlade(bladeId) {
+        if (!this.unlockedBlades.includes(bladeId)) return;
+        this.selectedBlade = bladeId;
+        try {
+          localStorage.setItem('ninja_slice_active_blade', bladeId);
+        } catch(e) {}
+        this.renderDojoMenu();
+      }
+
+      checkAchievements(gameEndInfo = {}) {
+        let unlockedAny = false;
+        
+        if (!this.unlockedBlades.includes('FIRE') && this.stats.totalSliced >= 100) {
+          this.unlockedBlades.push('FIRE');
+          unlockedAny = true;
+          setTimeout(() => this.showAchievementUnlock('FIRE'), 500);
+        }
+
+        if (!this.unlockedBlades.includes('RAINBOW') && this.stats.maxCombo >= 5) {
+          this.unlockedBlades.push('RAINBOW');
+          unlockedAny = true;
+          setTimeout(() => this.showAchievementUnlock('RAINBOW'), 1200);
+        }
+
+        if (!this.unlockedBlades.includes('ICE') && this.bestScores.ZEN >= 150) {
+          this.unlockedBlades.push('ICE');
+          unlockedAny = true;
+          setTimeout(() => this.showAchievementUnlock('ICE'), 500);
+        }
+
+        if (!this.unlockedBlades.includes('SHADOW')) {
+          if (gameEndInfo.mode === 'ARCADE' && gameEndInfo.score >= 80 && gameEndInfo.bombsHit === 0) {
+            this.unlockedBlades.push('SHADOW');
+            unlockedAny = true;
+            setTimeout(() => this.showAchievementUnlock('SHADOW'), 500);
+          }
+        }
+
+        if (unlockedAny) {
+          this.saveUnlockedBlades();
+        }
+      }
+
+      showAchievementUnlock(bladeId) {
+        const info = BLADES[bladeId];
+        this.showTextIndicator(this.width / 2, this.height * 0.45, `🏆 UNLOCKED: ${info.name}!`, '#fbbf24', 1.8);
+      }
+
+      drawDojoBackground() {
+        const ctx = this.ctx;
+        const w = this.width;
+        const h = this.height;
+
+        ctx.fillStyle = '#1e100a';
+        ctx.fillRect(0, 0, w, h);
+
+        const plankWidth = 120;
+        const count = Math.ceil(w / plankWidth);
+        for (let i = 0; i < count; i++) {
+          const px = i * plankWidth;
+          const grad = ctx.createLinearGradient(px, 0, px + plankWidth, 0);
+          if (i % 2 === 0) {
+            grad.addColorStop(0, '#2b170e');
+            grad.addColorStop(0.5, '#351c11');
+            grad.addColorStop(1, '#25140c');
+          } else {
+            grad.addColorStop(0, '#21110a');
+            grad.addColorStop(0.5, '#2e1910');
+            grad.addColorStop(1, '#1f1009');
+          }
+          ctx.fillStyle = grad;
+          ctx.fillRect(px, 0, plankWidth, h);
+
+          ctx.strokeStyle = 'rgba(12, 6, 2, 0.45)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(px, 0);
+          ctx.lineTo(px, h);
+          ctx.stroke();
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.015)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(px + 1.5, 0);
+          ctx.lineTo(px + 1.5, h);
+          ctx.stroke();
+
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.006)';
+          ctx.lineWidth = 1.5;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(px, 0, plankWidth, h);
+          ctx.clip();
+          
+          const grainCount = 3;
+          for (let g = 0; g < grainCount; g++) {
+            const gx = px + (plankWidth / grainCount) * g + Math.sin(g) * 12;
+            ctx.beginPath();
+            ctx.moveTo(gx, 0);
+            ctx.bezierCurveTo(gx - 20, h * 0.35, gx + 20, h * 0.65, gx - 10, h);
+            ctx.stroke();
+          }
+          ctx.restore();
+        }
+
+        this.drawWoodCuts();
+
+        const radialGrad = ctx.createRadialGradient(
+          w / 2, h / 2, Math.min(w, h) * 0.35,
+          w / 2, h / 2, Math.max(w, h) * 0.85
+        );
+        radialGrad.addColorStop(0, 'rgba(0, 0, 0, 0.0)');
+        radialGrad.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
+        ctx.fillStyle = radialGrad;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      drawWoodCuts() {
+        const ctx = this.ctx;
+        ctx.save();
+        this.woodCuts.forEach(cut => {
+          const progress = cut.life / cut.maxLife;
+          
+          ctx.strokeStyle = `rgba(12, 5, 2, ${progress * 0.75})`;
+          ctx.lineWidth = cut.width;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(cut.x1, cut.y1);
+          ctx.lineTo(cut.x2, cut.y2);
+          ctx.stroke();
+
+          ctx.strokeStyle = `rgba(255, 255, 255, ${progress * 0.045})`;
+          ctx.lineWidth = cut.width * 0.4;
+          ctx.lineCap = 'round';
+          ctx.beginPath();
+          ctx.moveTo(cut.x1 + 1, cut.y1 + 1);
+          ctx.lineTo(cut.x2 + 1, cut.y2 + 1);
+          ctx.stroke();
+        });
+        ctx.restore();
+      }
+
+      renderDojoMenu() {
+        const bladesContainer = document.getElementById('dojoContentBlades');
+        bladesContainer.innerHTML = '';
+        
+        Object.keys(BLADES).forEach(bladeId => {
+          const blade = BLADES[bladeId];
+          const isUnlocked = this.unlockedBlades.includes(bladeId);
+          const isEquipped = this.selectedBlade === bladeId;
+          
+          const item = document.createElement('div');
+          item.className = `blade-item ${isEquipped ? 'selected' : ''}`;
+          
+          let btnHtml = '';
+          if (isEquipped) {
+            btnHtml = `<button class="blade-action-btn equipped" disabled>EQUIPPED</button>`;
+          } else if (isUnlocked) {
+            btnHtml = `<button class="blade-action-btn equip" onclick="window.gameEngine.equipBlade('${bladeId}')">EQUIP</button>`;
+          } else {
+            btnHtml = `<button class="blade-action-btn locked" disabled>LOCKED</button>`;
+          }
+          
+          let previewStyle = `background: ${blade.shadowColor}18; color: ${blade.color === 'rainbow' ? '#facc15' : blade.color}; border: 1px solid ${blade.shadowColor}40;`;
+          if (blade.color === 'rainbow') {
+            previewStyle = `background: linear-gradient(135deg, rgba(239,68,68,0.15) 0%, rgba(59,130,246,0.15) 100%); border: 1px solid rgba(255,255,255,0.15);`;
+          }
+          
+          item.innerHTML = `
+            <div class="blade-icon-preview" style="${previewStyle}">
+              ${blade.icon}
+            </div>
+            <div class="blade-details">
+              <div class="blade-name">
+                ${blade.name} 
+                ${isEquipped ? '<span style="font-size: 0.65rem; background: var(--color-primary); color: #fff; padding: 2px 6px; border-radius: 8px;">Active</span>' : ''}
+              </div>
+              <div class="blade-desc">${blade.desc}</div>
+              ${!isUnlocked ? `<div class="blade-unlock">🔒 ${blade.unlockDesc}</div>` : ''}
+            </div>
+            ${btnHtml}
+          `;
+          
+          bladesContainer.appendChild(item);
+        });
+
+        const statsContainer = document.getElementById('dojoContentStats');
+        statsContainer.innerHTML = `
+          <div class="stat-row">
+            <span class="stat-label">Total Slices</span>
+            <span class="stat-value">${this.stats.totalSliced}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Total Combos</span>
+            <span class="stat-value">${this.stats.totalCombos}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Max Combo</span>
+            <span class="stat-value">${this.stats.maxCombo} Fruit Combo</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Bombs Detonated</span>
+            <span class="stat-value">${this.stats.totalBombsHit}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Games Played</span>
+            <span class="stat-value">${this.stats.gamesPlayed}</span>
+          </div>
+          <div class="stat-row" style="margin-top: 8px; border-top: 1px dashed rgba(255,255,255,0.1); padding-top: 12px;">
+            <span class="stat-label">Best Classic Score</span>
+            <span class="stat-value" style="color: #facc15;">${this.bestScores.CLASSIC}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Best Arcade Score</span>
+            <span class="stat-value" style="color: #ec4899;">${this.bestScores.ARCADE}</span>
+          </div>
+          <div class="stat-row">
+            <span class="stat-label">Best Zen Score</span>
+            <span class="stat-value" style="color: #06b6d4;">${this.bestScores.ZEN}</span>
+          </div>
+        `;
+      }
+
+      updateTimerDisplay() {
+        const seconds = Math.max(0, Math.ceil(this.timer / 1000));
+        document.getElementById('timerValue').innerText = seconds;
+      }
+
+      throwWave() {
+        const isFreeze = this.blitzFreeze > 0;
+        const roll = Math.random();
+        let count = 1;
+        
+        if (roll > 0.85) count = 3;
+        else if (roll > 0.45) count = 2;
+        
+        if (this.fruits.length + this.bombs.length + count > MAX_FRUITS_ON_SCREEN) {
+          count = Math.max(1, MAX_FRUITS_ON_SCREEN - (this.fruits.length + this.bombs.length));
+        }
+        
+        for (let i = 0; i < count; i++) {
+          this.spawnStandardObject();
+        }
+      }
+
+      spawnStandardObject() {
+        const x = 80 + Math.random() * (this.width - 160);
+        const y = this.height + 40;
+        
+        const targetX = this.width / 2 + (Math.random() - 0.5) * (this.width * 0.4);
+        const targetY = this.height * 0.15 + Math.random() * (this.height * 0.35);
+        
+        const gravityValue = GRAVITY;
+        const peakHeight = y - targetY;
+        const timeToPeak = Math.sqrt((2 * peakHeight) / gravityValue);
+        
+        const vy = -gravityValue * timeToPeak;
+        const vx = (targetX - x) / timeToPeak;
+        
+        let objectRoll = Math.random();
+        const bombThreshold = this.gameMode === 'CLASSIC' ? 0.22 : (this.gameMode === 'ARCADE' ? 0.16 : 0.0);
+        
+        if (objectRoll < bombThreshold) {
+          const b = new Bomb(x, y, vx, vy);
+          b.startFuseSound();
+          this.bombs.push(b);
+        } else {
+          let isBlitz = false;
+          let fruitType = 'WATERMELON';
+          
+          if (this.gameMode === 'ARCADE' && Math.random() < 0.12) {
+            isBlitz = true;
+            const keys = Object.keys(BLITZ_TYPES);
+            fruitType = keys[Math.floor(Math.random() * keys.length)];
+            gameAudio.playBlitzSpawn();
+          } else {
+            const keys = Object.keys(FRUIT_TYPES);
+            fruitType = keys[Math.floor(Math.random() * keys.length)];
+          }
+          
+          this.fruits.push(new Fruit(x, y, vx, vy, fruitType, isBlitz));
+        }
+      }
+
+      spawnFrenzyFruit() {
+        const leftSide = Math.random() < 0.5;
+        const x = leftSide ? -30 : this.width + 30;
+        const y = this.height * 0.3 + Math.random() * (this.height * 0.4);
+        
+        const vx = leftSide ? (6 + Math.random() * 5) : -(6 + Math.random() * 5);
+        const vy = -4 - Math.random() * 5;
+        
+        const keys = Object.keys(FRUIT_TYPES);
+        const fruitType = keys[Math.floor(Math.random() * keys.length)];
+        this.fruits.push(new Fruit(x, y, vx, vy, fruitType, false));
+      }
+
+      detectCollisions() {
+        if (this.swipe.points.length < 2) return;
+        
+        const p2 = this.swipe.points[this.swipe.points.length - 1];
+        const p1 = this.swipe.points[this.swipe.points.length - 2];
+        
+        this.fruits.forEach(f => {
+          if (f.sliced) return;
+          const dist = getDistPointToSegment(f.x, f.y, p1.x, p1.y, p2.x, p2.y);
+          if (dist < f.radius) {
+            this.sliceFruit(f, p1, p2);
+          }
+        });
+        
+        this.bombs.forEach(b => {
+          if (b.sliced) return;
+          const dist = getDistPointToSegment(b.x, b.y, p1.x, p1.y, p2.x, p2.y);
+          if (dist < b.radius) {
+            this.detonateBomb(b);
+          }
+        });
+      }
+
+      sliceFruit(fruit, p1, p2) {
+        fruit.sliced = true;
+        
+        const sliceDist = getDistPointToSegment(fruit.x, fruit.y, p1.x, p1.y, p2.x, p2.y);
+        const isCritical = !fruit.isBlitz && (sliceDist < 3.2 || Math.random() < 0.05);
+        
+        if (isCritical) {
+          gameAudio.playCritical();
+          this.screenFlash = 120;
+          this.screenShake = 5.0;
+          this.score += 10;
+          document.getElementById('scoreValue').innerText = this.score;
+          this.showTextIndicator(fruit.x, fruit.y, 'CRITICAL! +10', '#facc15', 1.6);
+        } else {
+          gameAudio.playSplat(this.selectedBlade);
+          this.screenShake = 1.4;
+        }
+
+        this.stats.totalSliced++;
+        
+        const sliceAngle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+        const pushForce = 2.2 + Math.random() * 1.5;
+        const pushAngleL = sliceAngle - Math.PI / 2;
+        const pushAngleR = sliceAngle + Math.PI / 2;
+        
+        const vxl = fruit.vx + Math.cos(pushAngleL) * pushForce;
+        const vyl = fruit.vy + Math.sin(pushAngleL) * pushForce - 1.5;
+        const vxr = fruit.vx + Math.cos(pushAngleR) * pushForce;
+        const vyr = fruit.vy + Math.sin(pushAngleR) * pushForce - 1.5;
+        
+        this.slicedHalves.push(
+          new SlicedHalf(fruit.x, fruit.y, vxl, vyl, sliceAngle, fruit.spin, fruit.radius, fruit.type, fruit.isBlitz),
+          new SlicedHalf(fruit.x, fruit.y, vxr, vyr, sliceAngle, fruit.spin, fruit.radius, fruit.type, fruit.isBlitz)
+        );
+        
+        const particleColor = isCritical ? '#facc15' : fruit.color;
+        const burstCount = isCritical ? (24 + Math.floor(Math.random() * 12)) : (12 + Math.floor(Math.random() * 8));
+        
+        for (let i = 0; i < burstCount; i++) {
+          const sprayAngle = Math.random() * Math.PI * 2;
+          const speed = isCritical ? (5 + Math.random() * 10) : (3 + Math.random() * 6);
+          this.particles.push(new PhysicsParticle(
+            fruit.x, fruit.y,
+            Math.cos(sprayAngle) * speed + fruit.vx * 0.5,
+            Math.sin(sprayAngle) * speed + fruit.vy * 0.5,
+            particleColor,
+            2 + Math.random() * 3.5,
+            'juice',
+            this.selectedBlade
+          ));
+        }
+        
+        if (Math.random() < 0.8) {
+          this.splatters.push(new JuiceSplatter(fruit.x, fruit.y, isCritical ? '#fef08a' : fruit.color));
+        }
+        
+        if (fruit.isBlitz) {
+          this.activateBlitz(fruit.type);
+        } else {
+          let slicePoints = 1;
+          if (this.blitzDouble > 0) slicePoints = 2;
+          
+          if (!isCritical) {
+            this.score += slicePoints;
+            document.getElementById('scoreValue').innerText = this.score;
+          }
+          
+          this.comboCount++;
+          this.lastSliceTime = Date.now();
+          this.currentComboFruits.push({ x: fruit.x, y: fruit.y });
+        }
+      }
+
+      detonateBomb(bomb) {
+        bomb.sliced = true;
+        bomb.stopFuseSound();
+        gameAudio.playExplosion();
+        
+        this.screenFlash = 255;
+        this.screenShake = 18;
+        this.bombsHitThisGame++;
+        this.stats.totalBombsHit++;
+        
+        for (let i = 0; i < 40; i++) {
+          const angle = Math.random() * Math.PI * 2;
+          const speed = 4 + Math.random() * 12;
+          this.particles.push(new PhysicsParticle(
+            bomb.x, bomb.y,
+            Math.cos(angle) * speed,
+            Math.sin(angle) * speed,
+            Math.random() < 0.6 ? '#f59e0b' : '#ef4444',
+            3 + Math.random() * 5,
+            'juice',
+            this.selectedBlade
+          ));
+        }
+        
+        if (this.gameMode === 'CLASSIC') {
+          this.lives = 0;
+          this.renderHearts();
+          setTimeout(() => this.endGame(), 400);
+        } else if (this.gameMode === 'ARCADE') {
+          this.score = Math.max(0, this.score - 10);
+          document.getElementById('scoreValue').innerText = this.score;
+          this.showTextIndicator(bomb.x, bomb.y, '-10', '#ef4444');
+        }
+      }
+
+      activateBlitz(type) {
+        if (type === 'FREEZE') {
+          this.blitzFreeze = 6000;
+        } else if (type === 'FRENZY') {
+          this.blitzFrenzy = 6000;
+          this.frenzySpawnTimer = 0;
+        } else if (type === 'DOUBLE') {
+          this.blitzDouble = 6000;
+        }
+        this.showTextIndicator(this.width / 2, this.height * 0.33, `${type} MODE!`, BLITZ_TYPES[type].color, 2.0);
+      }
+
+      checkAndTriggerCombo() {
+        if (this.comboCount >= 3) {
+          this.stats.totalCombos++;
+          if (this.comboCount > this.stats.maxCombo) {
+            this.stats.maxCombo = this.comboCount;
+          }
+          this.saveStats();
+          
+          let comboBonus = this.comboCount;
+          if (this.blitzDouble > 0) comboBonus *= 2;
+          
+          this.score += comboBonus;
+          document.getElementById('scoreValue').innerText = this.score;
+          
+          let avgX = 0, avgY = 0;
+          this.currentComboFruits.forEach(f => {
+            avgX += f.x;
+            avgY += f.y;
+          });
+          avgX /= this.currentComboFruits.length;
+          avgY /= this.currentComboFruits.length;
+          
+          gameAudio.playCombo(this.comboCount);
+          this.announceCombo(this.comboCount);
+          this.showTextIndicator(avgX, avgY, `${this.comboCount} COMBO! +${comboBonus}`, '#fbbf24', 1.5);
+          this.screenShake = 6.0 + this.comboCount * 0.5;
+        }
+        
+        this.comboCount = 0;
+        this.currentComboFruits = [];
+      }
+
+      announceCombo(count) {
+        const ann = document.getElementById('comboAnnouncer');
+        ann.innerText = `${count} FRUIT COMBO!`;
+        ann.className = 'pop';
+        
+        setTimeout(() => {
+          ann.className = '';
+        }, 1200);
+      }
+
+      showTextIndicator(x, y, text, color, scale = 1.0) {
+        this.particles.push({
+          x, y,
+          vx: 0,
+          vy: -1.2,
+          color,
+          size: 0,
+          text,
+          scale,
+          alpha: 1.0,
+          decay: 0.02,
+          update(dt) {
+            this.y += this.vy * dt;
+            this.alpha -= this.decay * dt;
+            return this.alpha > 0;
+          },
+          draw(ctx) {
+            ctx.save();
+            ctx.globalAlpha = this.alpha;
+            ctx.fillStyle = this.color;
+            ctx.shadowBlur = 6;
+            ctx.shadowColor = 'rgba(0,0,0,0.8)';
+            ctx.font = `800 ${Math.floor(18 * this.scale)}px 'Outfit', sans-serif`;
+            ctx.textAlign = 'center';
+            ctx.fillText(this.text, this.x, this.y);
+            ctx.restore();
+          }
+        });
+      }
+
+      loop(timestamp) {
+        let dt = (timestamp - this.lastTime) / 16.666;
+        if (dt > 4) dt = 4;
+        this.lastTime = timestamp;
+        
+        this.update(dt);
+        this.draw();
+        
+        requestAnimationFrame((t) => this.loop(t));
+      }
+
+      update(dt) {
+        if (this.gameState !== 'PLAYING') {
+          this.swipe.update();
+          this.woodCuts = this.woodCuts.filter(cut => {
+            cut.life -= dt * 16.666;
+            return cut.life > 0;
+          });
+          return;
+        }
+        
+        if (this.screenShake > 0) {
+          this.screenShake = Math.max(0, this.screenShake - 0.8 * dt);
+        }
+        
+        this.woodCuts = this.woodCuts.filter(cut => {
+          cut.life -= dt * 16.666;
+          return cut.life > 0;
+        });
+        
+        let physicsDt = dt;
+        if (this.blitzFreeze > 0) {
+          physicsDt = dt * 0.35;
+          this.blitzFreeze = Math.max(0, this.blitzFreeze - dt * 16.666);
+        }
+        
+        if (this.blitzFrenzy > 0) {
+          this.blitzFrenzy = Math.max(0, this.blitzFrenzy - dt * 16.666);
+        }
+        if (this.blitzDouble > 0) {
+          this.blitzDouble = Math.max(0, this.blitzDouble - dt * 16.666);
+        }
+        
+        if (this.comboCount > 0 && Date.now() - this.lastSliceTime > 300) {
+          this.checkAndTriggerCombo();
+        }
+        
+        if (this.gameMode === 'ZEN' || this.gameMode === 'ARCADE') {
+          this.timer -= dt * 16.666;
+          this.updateTimerDisplay();
+          if (this.timer <= 0) {
+            this.endGame();
+            return;
+          }
+        }
+        
+        this.splatters = this.splatters.filter(s => s.update(dt));
+        this.slicedHalves = this.slicedHalves.filter(h => h.update(physicsDt));
+        
+        this.fruits = this.fruits.filter(f => {
+          const active = f.update(physicsDt);
+          if (!active && !f.sliced) {
+            if (this.gameMode === 'CLASSIC' && !f.isBlitz) {
+              this.lives--;
+              this.renderHearts();
+              if (this.lives <= 0) {
+                this.endGame();
+              }
+            }
+          }
+          return active && !f.sliced;
+        });
+        
+        this.bombs = this.bombs.filter(b => {
+          const active = b.update(physicsDt, this.particles);
+          if (!active || b.sliced) {
+            b.stopFuseSound();
+          }
+          return active && !b.sliced;
+        });
+        
+        this.particles = this.particles.filter(p => p.update(dt));
+        this.swipe.update();
+        
+        const now = Date.now();
+        if (this.blitzFrenzy > 0) {
+          this.frenzySpawnTimer += dt * 16.666;
+          if (this.frenzySpawnTimer > 280) {
+            this.spawnFrenzyFruit();
+            this.frenzySpawnTimer = 0;
+          }
+        } else {
+          const timeThreshold = this.blitzFreeze > 0 ? this.launchInterval * 1.5 : this.launchInterval;
+          if (now - this.lastLaunchTime > timeThreshold) {
+            this.throwWave();
+            this.lastLaunchTime = now;
+            
+            if (this.gameMode !== 'ZEN') {
+              this.timeElapsed += dt;
+              this.launchInterval = Math.max(450, MIN_LAUNCH_INTERVAL - (this.timeElapsed * 1.5));
+            }
+          }
+        }
+        
+        if (this.screenFlash > 0) {
+          this.screenFlash = Math.max(0, this.screenFlash - 8 * dt);
+        }
+      }
+
+      draw() {
+        this.ctx.save();
+        if (this.screenShake > 0) {
+          const dx = (Math.random() - 0.5) * this.screenShake;
+          const dy = (Math.random() - 0.5) * this.screenShake;
+          this.ctx.translate(dx, dy);
+        }
+
+        this.drawDojoBackground();
+        this.drawArcadePowerFilters();
+        this.splatters.forEach(s => s.draw(this.ctx));
+        this.slicedHalves.forEach(h => h.draw(this.ctx));
+        this.fruits.forEach(f => f.draw(this.ctx));
+        this.bombs.forEach(b => b.draw(this.ctx));
+        this.particles.forEach(p => p.draw(this.ctx));
+        this.swipe.draw(this.ctx);
+        
+        if (this.screenFlash > 0) {
+          this.ctx.save();
+          if (this.screenShake > 10) {
+            this.ctx.fillStyle = `rgba(239, 68, 68, ${this.screenFlash / 255})`;
+          } else {
+            this.ctx.fillStyle = `rgba(255, 255, 255, ${this.screenFlash / 255})`;
+          }
+          this.ctx.fillRect(0, 0, this.width, this.height);
+          this.ctx.restore();
+        }
+        this.ctx.restore();
+      }
+
+      drawArcadePowerFilters() {
+        if (this.gameState !== 'PLAYING') return;
+        
+        if (this.blitzFreeze > 0) {
+          const grad = this.ctx.createRadialGradient(
+            this.width/2, this.height/2, this.width*0.2, 
+            this.width/2, this.height/2, this.width*0.75
+          );
+          grad.addColorStop(0, 'rgba(6, 182, 212, 0.0)');
+          grad.addColorStop(1, 'rgba(6, 182, 212, 0.12)');
+          this.ctx.fillStyle = grad;
+          this.ctx.fillRect(0, 0, this.width, this.height);
+          this.drawBlitzLabel("FREEZE ACTIVE", '#06b6d4', this.blitzFreeze);
+        }
+        
+        if (this.blitzFrenzy > 0) {
+          const grad = this.ctx.createRadialGradient(
+            this.width/2, this.height/2, this.width*0.2, 
+            this.width/2, this.height/2, this.width*0.75
+          );
+          grad.addColorStop(0, 'rgba(236, 72, 153, 0.0)');
+          grad.addColorStop(1, 'rgba(236, 72, 153, 0.12)');
+          this.ctx.fillStyle = grad;
+          this.ctx.fillRect(0, 0, this.width, this.height);
+          this.drawBlitzLabel("FRENZY ACTIVE", '#ec4899', this.blitzFrenzy, this.blitzFreeze > 0 ? 30 : 0);
+        }
+        
+        if (this.blitzDouble > 0) {
+          const grad = this.ctx.createRadialGradient(
+            this.width/2, this.height/2, this.width*0.2, 
+            this.width/2, this.height/2, this.width*0.75
+          );
+          grad.addColorStop(0, 'rgba(168, 85, 247, 0.0)');
+          grad.addColorStop(1, 'rgba(168, 85, 247, 0.12)');
+          this.ctx.fillStyle = grad;
+          this.ctx.fillRect(0, 0, this.width, this.height);
+          
+          const verticalOffset = (this.blitzFreeze > 0 ? 30 : 0) + (this.blitzFrenzy > 0 ? 30 : 0);
+          this.drawBlitzLabel("DOUBLE POINTS", '#a855f7', this.blitzDouble, verticalOffset);
+        }
+      }
+
+      drawBlitzLabel(label, color, timeLeftMs, verticalOffset = 0) {
+        this.ctx.save();
+        this.ctx.fillStyle = color;
+        this.ctx.font = "800 12px 'Outfit', sans-serif";
+        this.ctx.textAlign = "center";
+        this.ctx.shadowBlur = 4;
+        this.ctx.shadowColor = color;
+        
+        const secs = (timeLeftMs / 1000).toFixed(1);
+        this.ctx.fillText(`${label} - ${secs}s`, this.width / 2, 95 + verticalOffset);
+        this.ctx.restore();
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.gameEngine = new NinjaSliceGame();
+    });
+  </script>
+</body>
+</html>
